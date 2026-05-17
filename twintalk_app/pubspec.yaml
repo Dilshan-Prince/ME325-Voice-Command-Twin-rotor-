@@ -1,0 +1,50 @@
+name: twintalk
+description: Voice-Actuated Tracking System for Twin Rotor — ME 325 Engineering Design Project 2026
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Icons
+  cupertino_icons: ^1.0.6
+  google_fonts: ^8.1.0
+
+  # State Management
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.5
+
+  # Networking (WebSocket to Raspberry Pi)
+  web_socket_channel: ^3.0.3
+  http: ^1.1.0
+
+  # Audio Recording (for Whisper ASR)
+  record: ^6.2.0
+  path_provider: ^2.1.1
+  permission_handler: ^12.0.1
+
+  # Charts for telemetry
+  fl_chart: ^1.2.0
+
+  # Storage
+  shared_preferences: ^2.2.2
+
+  # Utilities
+  intl: ^0.20.2
+  logger: ^2.0.2+1
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/
+    - assets/images/
