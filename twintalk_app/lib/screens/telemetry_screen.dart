@@ -17,8 +17,8 @@ class TelemetryScreen extends StatefulWidget {
 
 class _TelemetryScreenState extends State<TelemetryScreen> {
   // Simulated target values (set when a trajectory is approved)
-  double _targetPitch = 30.0;
-  double _targetYaw = 45.0;
+  final double _targetPitch = 30.0;
+  final double _targetYaw = 45.0;
 
   final List<Map<String, String>> _logs = [
     {'time': '09:41:02', 'msg': 'Trajectory approved by operator', 'lvl': 'ok'},
