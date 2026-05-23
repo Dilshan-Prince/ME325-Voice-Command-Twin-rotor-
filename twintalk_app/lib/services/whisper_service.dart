@@ -1,24 +1,22 @@
 // lib/services/whisper_service.dart
 import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:google_generative_ai/google_generative_ai.dart' as genai;
+import 'api_keys.dart';
 
-/// Wraps the OpenAI Whisper REST API for audio transcription.
+/// Wraps the Google Gemini API for audio transcription.
 ///
-/// SETUP: Add your OpenAI API key to lib/services/api_keys.dart (never commit it).
+/// SETUP: Add your Gemini API key to lib/services/api_keys.dart (never commit it).
 /// The app records audio to a temporary .m4a file, sends it to the
-/// Whisper endpoint, and returns the transcribed text.
+/// Gemini 1.5 Flash model, and returns the transcribed text.
 class WhisperService {
   final Logger _log = Logger();
   final AudioRecorder _recorder = AudioRecorder();
 
-  // Replace with your OpenAI API key — see api_keys.dart
-  static const String _apiKey = String.fromEnvironment(
-    'OPENAI_API_KEY',
-    defaultValue: 'YOUR_OPENAI_API_KEY_HERE',
-  );
+  // Gemini API key — see api_keys.dart
+  static const String _apiKey = geminiApiKey;
 
   String? _recordingPath;
   bool _isRecording = false;
@@ -38,7 +36,7 @@ class WhisperService {
     await _recorder.start(
       const RecordConfig(
         encoder: AudioEncoder.aacLc,
-        sampleRate: 16000, // Whisper works best at 16 kHz
+        sampleRate: 16000, // Gemini works great with 16 kHz audio
         numChannels: 1,    // Mono
         bitRate: 128000,
       ),
@@ -50,7 +48,7 @@ class WhisperService {
   }
 
   // ── Stop and Transcribe ────────────────────────────────────────
-  /// Stops recording, sends the audio to Whisper, returns transcript.
+  /// Stops recording, sends the audio to Gemini, returns transcript.
   Future<String> stopAndTranscribe() async {
     if (!_isRecording) return '';
 
@@ -59,7 +57,7 @@ class WhisperService {
 
     if (_recordingPath == null) return '';
 
-    _log.i('Recording stopped. Transcribing...');
+    _log.i('Recording stopped. Transcribing with Gemini...');
     final transcript = await _transcribeFile(File(_recordingPath!));
     _log.i('Transcript: "$transcript"');
     return transcript;
@@ -75,23 +73,33 @@ class WhisperService {
 
   // ── API Call ───────────────────────────────────────────────────
   Future<String> _transcribeFile(File audioFile) async {
-    const url = 'https://api.openai.com/v1/audio/transcriptions';
+    try {
+      final model = genai.GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: _apiKey,
+      );
 
-    final request = http.MultipartRequest('POST', Uri.parse(url))
-      ..headers['Authorization'] = 'Bearer $_apiKey'
-      ..fields['model'] = 'whisper-1'
-      ..fields['language'] = 'en'
-      ..fields['response_format'] = 'text'
-      ..files.add(await http.MultipartFile.fromPath('file', audioFile.path));
+      final audioBytes = await audioFile.readAsBytes();
 
-    final response = await request.send();
-    final body = await response.stream.bytesToString();
+      final response = await model.generateContent([
+        genai.Content.multi([
+          genai.TextPart(
+            'Please transcribe this audio recording verbatim. '
+            'Only output the transcript itself, with no added explanations, introductory comments, or punctuation/capitalization adjustments.',
+          ),
+          genai.DataPart('audio/m4a', audioBytes),
+        ]),
+      ]);
 
-    if (response.statusCode == 200) {
-      return body.trim();
-    } else {
-      _log.e('Whisper API error ${response.statusCode}: $body');
-      throw Exception('Transcription failed: ${response.statusCode}');
+      final text = response.text;
+      if (text == null || text.trim().isEmpty) {
+        throw Exception('Empty response from Gemini API');
+      }
+
+      return text.trim();
+    } catch (e) {
+      _log.e('Gemini API error: $e');
+      throw Exception('Transcription failed: $e');
     }
   }
 

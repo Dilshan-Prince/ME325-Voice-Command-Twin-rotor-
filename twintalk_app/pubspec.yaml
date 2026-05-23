@@ -37,6 +37,7 @@ dependencies:
   intl: ^0.20.2
   logger: ^2.0.2+1
   vector_math: ^2.1.4
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:

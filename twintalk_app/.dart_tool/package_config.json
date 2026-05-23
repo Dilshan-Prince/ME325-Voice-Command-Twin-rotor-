@@ -140,6 +140,12 @@
       "languageVersion": "3.9"
     },
     {
+      "name": "google_generative_ai",
+      "rootUri": "file:///C:/Users/Dilshan/AppData/Local/Pub/Cache/hosted/pub.dev/google_generative_ai-0.4.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
       "name": "hooks",
       "rootUri": "file:///C:/Users/Dilshan/AppData/Local/Pub/Cache/hosted/pub.dev/hooks-1.0.3",
       "packageUri": "lib/",

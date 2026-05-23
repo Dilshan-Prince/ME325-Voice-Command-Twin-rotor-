@@ -22,9 +22,17 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
 
   final List<Map<String, String>> _logs = [
     {'time': '09:41:02', 'msg': 'Trajectory approved by operator', 'lvl': 'ok'},
-    {'time': '09:41:02', 'msg': 'Geometric controller engaged (SE3)', 'lvl': 'info'},
+    {
+      'time': '09:41:02',
+      'msg': 'Geometric controller engaged (SE3)',
+      'lvl': 'info'
+    },
     {'time': '09:41:03', 'msg': 'PWM streaming → Laptop Server', 'lvl': 'info'},
-    {'time': '09:41:04', 'msg': 'Pitch error 11.8° — converging', 'lvl': 'warn'},
+    {
+      'time': '09:41:04',
+      'msg': 'Pitch error 11.8° — converging',
+      'lvl': 'warn'
+    },
     {'time': '09:41:05', 'msg': 'Ψ decreasing: 0.81 → 0.23', 'lvl': 'ok'},
   ];
 
@@ -46,8 +54,8 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
                       _PulseDot(),
                       const SizedBox(width: 6),
                       Text('Executing',
-                          style: AppTheme.labelSmall.copyWith(
-                              color: AppTheme.success, fontSize: 11)),
+                          style: AppTheme.labelSmall
+                              .copyWith(color: AppTheme.success, fontSize: 11)),
                     ],
                   ),
               ],
@@ -61,7 +69,9 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
                 final t = state is TelemetryLoaded
                     ? state.current
                     : TelemetryData.mock();
-                final history = state is TelemetryLoaded ? state.history : <TelemetryData>[];
+                final history = state is TelemetryLoaded
+                    ? state.history
+                    : <TelemetryData>[];
 
                 return ListView(
                   padding: const EdgeInsets.all(16),
@@ -99,7 +109,8 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
                           _vDivider(),
                           _MiniStat('R2 PWM', '${t.pwm2Us}', 'µs'),
                           _vDivider(),
-                          _MiniStat('Error Ψ', t.psiError.toStringAsFixed(2), '',
+                          _MiniStat(
+                              'Error Ψ', t.psiError.toStringAsFixed(2), '',
                               valueColor: AppTheme.primaryLight),
                         ],
                       ),
@@ -132,7 +143,8 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
                                     reservedSize: 30,
                                     getTitlesWidget: (v, _) => Text(
                                       v.toStringAsFixed(0),
-                                      style: AppTheme.labelSmall.copyWith(fontSize: 9),
+                                      style: AppTheme.labelSmall
+                                          .copyWith(fontSize: 9),
                                     ),
                                   ),
                                 ),
@@ -147,24 +159,31 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
                               lineBarsData: [
                                 // Pitch line
                                 LineChartBarData(
-                                  spots: history.asMap().entries.map((e) =>
-                                      FlSpot(e.key.toDouble(), e.value.pitchDeg)).toList(),
+                                  spots: history
+                                      .asMap()
+                                      .entries
+                                      .map((e) => FlSpot(
+                                          e.key.toDouble(), e.value.pitchDeg))
+                                      .toList(),
                                   isCurved: true,
                                   color: AppTheme.primaryLight,
                                   barWidth: 1.5,
                                   dotData: const FlDotData(show: false),
                                   belowBarData: BarAreaData(
                                     show: true,
-                                    color: AppTheme.primaryLight.withValues(alpha: 0.05),
+                                    color: AppTheme.primaryLight
+                                        .withValues(alpha: 0.05),
                                   ),
                                 ),
                                 // Target line
                                 LineChartBarData(
                                   spots: [
                                     FlSpot(0, _targetPitch),
-                                    FlSpot(history.length.toDouble(), _targetPitch),
+                                    FlSpot(history.length.toDouble(),
+                                        _targetPitch),
                                   ],
-                                  color: AppTheme.success.withValues(alpha: 0.4),
+                                  color:
+                                      AppTheme.success.withValues(alpha: 0.4),
                                   barWidth: 1,
                                   dashArray: [4, 4],
                                   dotData: const FlDotData(show: false),
@@ -185,10 +204,10 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
                       child: Column(
                         children: _logs.map((l) {
                           final lvl = switch (l['lvl']) {
-                            'ok'   => LogLevel.ok,
+                            'ok' => LogLevel.ok,
                             'warn' => LogLevel.warn,
-                            'err'  => LogLevel.error,
-                            _      => LogLevel.info,
+                            'err' => LogLevel.error,
+                            _ => LogLevel.info,
                           };
                           return TTLogEntry(
                               time: l['time']!, message: l['msg']!, level: lvl);
@@ -308,7 +327,8 @@ class _CtrlButton extends StatelessWidget {
             Icon(icon, size: 18, color: color),
             const SizedBox(height: 3),
             Text(label,
-                style: AppTheme.labelSmall.copyWith(color: color, fontSize: 10)),
+                style:
+                    AppTheme.labelSmall.copyWith(color: color, fontSize: 10)),
           ],
         ),
       ),

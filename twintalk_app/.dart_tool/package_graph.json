@@ -13,6 +13,7 @@
         "flutter",
         "flutter_bloc",
         "google_fonts",
+        "google_generative_ai",
         "http",
         "intl",
         "logger",
@@ -51,6 +52,13 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "google_generative_ai",
+      "version": "0.4.7",
+      "dependencies": [
+        "http"
       ]
     },
     {

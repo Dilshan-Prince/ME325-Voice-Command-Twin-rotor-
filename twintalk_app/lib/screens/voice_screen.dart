@@ -46,7 +46,7 @@ class VoiceScreen extends StatelessWidget {
                       const Icon(Icons.psychology_outlined,
                           size: 14, color: AppTheme.onSurfaceMid),
                       const SizedBox(width: 4),
-                      Text('Whisper ASR',
+                      Text('Gemini ASR',
                           style: AppTheme.labelSmall
                               .copyWith(color: AppTheme.onSurfaceMid, fontSize: 11)),
                     ],
@@ -117,9 +117,9 @@ class VoiceScreen extends StatelessWidget {
   }
 
   String _stateLabel(VoiceState state) => switch (state) {
-        VoiceIdle()               => 'Tap the mic to start speaking',
-        VoiceListening()          => 'Listening — speak your command…',
-        VoiceTranscribing()       => 'Transcribing with Whisper…',
+        VoiceIdle()               => 'Press and hold the mic to speak',
+        VoiceListening()          => 'Listening — release to process…',
+        VoiceTranscribing()       => 'Transcribing with Gemini…',
         VoiceTranscribed()        => 'Transcript received',
         VoiceParsing()            => 'AI agent parsing intent…',
         VoiceParsed()             => 'Intent parsed — review and send',
@@ -130,69 +130,158 @@ class VoiceScreen extends StatelessWidget {
       };
 }
 
-// ── Mic Button ─────────────────────────────────────────────────
-class _MicButton extends StatelessWidget {
+// ── Mic Button (Siri-like Animated Hold-to-Speak) ───────────────
+class _MicButton extends StatefulWidget {
   final VoiceState state;
   const _MicButton({required this.state});
 
-  bool get _isListening => state is VoiceListening;
+  @override
+  State<_MicButton> createState() => _MicButtonState();
+}
+
+class _MicButtonState extends State<_MicButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _pulseAnimation;
+
+  bool get _isListening => widget.state is VoiceListening;
   bool get _isBusy =>
-      state is VoiceTranscribing ||
-      state is VoiceParsing ||
-      state is VoiceGeneratingTrajectory;
+      widget.state is VoiceTranscribing ||
+      widget.state is VoiceParsing ||
+      widget.state is VoiceGeneratingTrajectory;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.22).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _MicButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_isListening) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: _isBusy
+      onTapDown: _isBusy
+          ? null
+          : (_) {
+              if (!_isListening) {
+                context.read<VoiceBloc>().add(VoiceRecordStarted());
+              }
+            },
+      onTapUp: _isBusy
+          ? null
+          : (_) {
+              if (_isListening) {
+                final voiceBloc = context.read<VoiceBloc>();
+                // Short guard to allow the recorder to initialize properly
+                Future.delayed(const Duration(milliseconds: 150), () {
+                  if (mounted) {
+                    voiceBloc.add(VoiceRecordStopped());
+                  }
+                });
+              }
+            },
+      onTapCancel: _isBusy
           ? null
           : () {
               if (_isListening) {
                 context.read<VoiceBloc>().add(VoiceRecordStopped());
-              } else {
-                context.read<VoiceBloc>().add(VoiceRecordStarted());
               }
             },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 110,
-        height: 110,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: _isListening
-              ? AppTheme.primaryLight.withValues(alpha: 0.2)
-              : AppTheme.primary.withValues(alpha: 0.12),
-          border: Border.all(
-            color: _isListening
-                ? AppTheme.primaryLight
-                : AppTheme.primary.withValues(alpha: 0.5),
-            width: _isListening ? 2 : 1,
-          ),
-        ),
-        child: Center(
-          child: Container(
-            width: 72,
-            height: 72,
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          final scale = _isListening ? _pulseAnimation.value : 1.0;
+          return Container(
+            width: 120 * scale,
+            height: 120 * scale,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _isBusy ? AppTheme.surfaceElevated : AppTheme.primary,
+              boxShadow: _isListening
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.primaryLight.withValues(alpha: 0.3 * (2.0 - scale)),
+                        blurRadius: 15 * scale,
+                        spreadRadius: 5 * scale,
+                      )
+                    ]
+                  : [],
+              color: _isListening
+                  ? AppTheme.primaryLight.withValues(alpha: 0.15)
+                  : AppTheme.primary.withValues(alpha: 0.08),
+              border: Border.all(
+                color: _isListening
+                    ? AppTheme.primaryLight
+                    : AppTheme.primary.withValues(alpha: 0.4),
+                width: _isListening ? 2 : 1.5,
+              ),
             ),
-            child: _isBusy
-                ? const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppTheme.primaryLight),
-                    ),
-                  )
-                : Icon(
-                    _isListening ? Icons.stop : Icons.mic,
-                    size: 32,
-                    color: Colors.white,
-                  ),
-          ),
-        ),
+            child: Center(
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: _isListening
+                      ? const LinearGradient(
+                          colors: [AppTheme.primaryLight, Color(0xFF64B5F6)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : const LinearGradient(
+                          colors: [AppTheme.primary, Color(0xFF1E88E5)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_isListening ? AppTheme.primaryLight : AppTheme.primary)
+                          .withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: _isBusy
+                    ? const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        _isListening ? Icons.mic : Icons.mic_none_outlined,
+                        size: 34,
+                        color: Colors.white,
+                      ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
