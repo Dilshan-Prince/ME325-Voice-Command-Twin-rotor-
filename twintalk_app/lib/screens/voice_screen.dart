@@ -142,6 +142,7 @@ class _MicButton extends StatefulWidget {
 class _MicButtonState extends State<_MicButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _pulseAnimation;
+  bool _isHolding = false;
 
   bool get _isListening => widget.state is VoiceListening;
   bool get _isBusy =>
@@ -166,6 +167,17 @@ class _MicButtonState extends State<_MicButton> with SingleTickerProviderStateMi
     super.didUpdateWidget(oldWidget);
     if (_isListening) {
       _controller.repeat(reverse: true);
+
+      // Async Startup Guard: If user has already released the hold before
+      // the async recording start completed, stop it immediately.
+      if (!_isHolding) {
+        final voiceBloc = context.read<VoiceBloc>();
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted && widget.state is VoiceListening) {
+            voiceBloc.add(VoiceRecordStopped());
+          }
+        });
+      }
     } else {
       _controller.stop();
       _controller.reset();
@@ -184,6 +196,7 @@ class _MicButtonState extends State<_MicButton> with SingleTickerProviderStateMi
       onTapDown: _isBusy
           ? null
           : (_) {
+              _isHolding = true;
               if (!_isListening) {
                 context.read<VoiceBloc>().add(VoiceRecordStarted());
               }
@@ -191,11 +204,12 @@ class _MicButtonState extends State<_MicButton> with SingleTickerProviderStateMi
       onTapUp: _isBusy
           ? null
           : (_) {
+              _isHolding = false;
               if (_isListening) {
                 final voiceBloc = context.read<VoiceBloc>();
                 // Short guard to allow the recorder to initialize properly
                 Future.delayed(const Duration(milliseconds: 150), () {
-                  if (mounted) {
+                  if (mounted && widget.state is VoiceListening) {
                     voiceBloc.add(VoiceRecordStopped());
                   }
                 });
@@ -204,6 +218,7 @@ class _MicButtonState extends State<_MicButton> with SingleTickerProviderStateMi
       onTapCancel: _isBusy
           ? null
           : () {
+              _isHolding = false;
               if (_isListening) {
                 context.read<VoiceBloc>().add(VoiceRecordStopped());
               }
