@@ -1,0 +1,9 @@
+flask
+openapi-core
+langgraph
+langchain-openai
+meshcat
+numpy
+fastapi
+uvicorn
+meshcat-shapes

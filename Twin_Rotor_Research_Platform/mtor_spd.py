@@ -1,0 +1,161 @@
+import os
+import can
+import time
+
+
+class Motorsp:
+
+    CONVERSION_FACTOR = 0.01 #dps/LSB
+    #constructor
+    def __init__(self):
+
+        #M0 CAN ID
+        self.motor0ID = 0x141
+
+        #M1 CAN ID
+        self.motor1ID = 0x142
+
+        #Speed control command ID
+        self.speedControlCommandID = 0xA2
+
+    	#Motor off command ID
+        self.motorOffID = 0x80
+
+        #Motor stop command ID
+        self.motorStopID = 0x81
+
+        #Motor run command ID
+        self.motoRunID = 0x88
+
+        os.system('sudo ip link set can0 type can bitrate 1000000')
+        os.system('sudo ifconfig can0 up')
+
+        self.can0 = can.interface.Bus(channel = 'can0', bustype = 'socketcan')#type: ignore
+        self.set_speed_M0(0)
+        self.set_speed_M1(0)
+
+        pass
+
+    def __del__(self):
+        print("Shutting down motors")
+        self._speedControlM1(0)
+        self._speedControlM0(0)
+        self.stop()
+        self.can0.shutdown()
+        os.system('sudo ifconfig can0 down')
+
+    @classmethod
+    def _convert_speed(cls,speed):
+        speed_dps = speed*360/60
+        raw_speed = speed_dps/0.01
+        return int(raw_speed)
+
+    
+    def stop(self):
+        self.stopM0()
+        self.stopM1()
+
+    def set_speed(self,m0_speed_rpm,m1_speed_rpm):
+        self.set_speed_M0(m0_speed_rpm)
+        self.set_speed_M1(m1_speed_rpm)
+
+    def set_speed_M0(self,speed_rpm):
+        self._speedControlM0(self._convert_speed(speed_rpm))
+
+    def set_speed_M1(self,speed_rpm):
+        self._speedControlM1(self._convert_speed(speed_rpm))
+
+    def _speedControlM0(self, speed):
+
+        byte1 = speed & 0xFF
+        byte2 = (speed & 0xFF00) >> 8
+        byte3 = (speed & 0xFF0000) >> 16
+        byte4 = (speed & 0xFF000000) >> 24
+        
+        # print(byte1)
+        # print(byte2)
+        # print(byte3)
+        # print(byte4)
+
+        msg = can.Message(arbitration_id = self.motor0ID, data = [self.speedControlCommandID, 0, 0, 0, byte1, byte2, byte3, byte4], is_extended_id=False)
+        self.can0.send(msg)
+
+    def _speedControlM1(self, speed):
+
+        byte1 = speed & 0xFF
+        byte2 = (speed & 0xFF00) >> 8
+        byte3 = (speed & 0xFF0000) >> 16
+        byte4 = (speed & 0xFF000000) >> 24
+        
+        # print(byte1)
+        # print(byte2)
+        # print(byte3)
+        # print(byte4)
+
+        msg = can.Message(arbitration_id = self.motor1ID, data = [self.speedControlCommandID, 0, 0, 0, byte1, byte2, byte3, byte4], is_extended_id=False)
+        self.can0.send(msg)
+
+    def turnOffM0(self):
+
+        msg = can.Message(arbitration_id = self.motor0ID, data = [self.motorOffID, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
+        self.can0.send(msg)
+
+    def turnOffM1(self):
+
+        msg = can.Message(arbitration_id = self.motor1ID, data = [self.motorOffID, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
+        self.can0.send(msg)
+
+    def stopM0(self):
+
+        msg = can.Message(arbitration_id = self.motor0ID, data = [self.motorStopID, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
+        self.can0.send(msg)
+
+    def stopM1(self):
+
+        msg = can.Message(arbitration_id = self.motor1ID, data = [self.motorStopID, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
+        self.can0.send(msg)
+
+    def runM0(self):
+
+        msg = can.Message(arbitration_id = self.motor0ID, data = [self.motoRunID, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
+        self.can0.send(msg)
+
+    def runM1(self):
+
+        msg = can.Message(arbitration_id = self.motor1ID, data = [self.motoRunID, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
+        self.can0.send(msg)
+        
+    def _get_spd(self, g_id):
+    
+        msg = can.Message(arbitration_id = 0x142, data = [g_id, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
+        self.can0.send(msg)
+        
+    def _get_msg(self,tout):
+        
+        msg1 = self.can0.recv(tout);
+        return msg1;
+        
+        
+        
+def main():
+    
+    controller = Motorsp()
+    #controller.set_speed(700,700)
+    
+    #controller.runM0()
+    fnd_sp = controller._get_msg(0.5)
+    print(fnd_sp)
+    controller.set_speed_M1(700)
+    
+    controller._get_spd(0x70)
+    fnd_sp = controller._get_msg(0.5)
+    print(fnd_sp)
+    fnd_sp = controller._get_msg(0.5)
+    print(fnd_sp)
+    print("new")
+    time.sleep(5)
+    controller.stop()
+    
+
+if __name__ == "__main__":
+    main()
